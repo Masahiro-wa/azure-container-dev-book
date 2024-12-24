@@ -1,0 +1,53 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+groups:
+  - docker
+
+system_info:
+  default_user:
+    groups: [docker]
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - unattended-upgrades
+  - git
+  - zip
+
+runcmd:
+- curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+- az version > /tmp/az_version.txt
+- mkdir -p /etc/apt/keyrings
+- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
+# - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+- echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+- apt-get update
+- apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+- systemctl enable docker
+- systemctl start docker
+
+# GitHubリポジトリのURL変数
+- REPO_URL="https://github.com/yourusername/yourrepository.git"
+
+# odaユーザーの作成とSSH鍵のコピー
+- adduser --disabled-password --gecos "" oda
+- usermod -aG sudo oda
+- usermod -aG docker oda
+- mkdir -p /home/oda/.ssh
+- cp /home/ubuntu/.ssh/authorized_keys /home/oda/.ssh/
+- chown -R oda:oda /home/oda/.ssh
+- chmod 700 /home/oda/.ssh
+- chmod 600 /home/oda/.ssh/authorized_keys
+
+# GitHubリポジトリのクローン
+- REPO_URL="https://github.com/yourusername/yourrepository.git"
+- su - oda -c "git clone $REPO_URL /home/oda/workspace"
+
+final_message: "The system is finally up, after $UPTIME seconds"

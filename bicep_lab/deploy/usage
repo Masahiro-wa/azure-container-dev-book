@@ -1,0 +1,3 @@
+Usage:
+  deploy -d | --deploy
+    [-c <components> | --components <components>]

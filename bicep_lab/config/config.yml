@@ -1,0 +1,14 @@
+
+EnvironmentName: 'bicep-lab'
+Location: 'japaneast'
+
+UseSsh: 'True'
+AdminPassword: ''
+AdminUsername: 'azureadmin'
+Admin_password: ''
+SecurityType: "Standard"
+OsDiskType: "Standard_LRS"
+VmSize: "Standard_D2s_v3"
+UbuntuOsVersion: "Ubuntu-2204"
+
+
