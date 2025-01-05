@@ -1,5 +1,7 @@
 @secure()
-param sqlPass string
+param sql_pass string
+@secure()
+param sql_secret_name string
 param vaultName string
 param location string = resourceGroup().location
 
@@ -18,8 +20,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 
 resource dbPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'sqlPassword'
+  name: sql_secret_name
   properties: {
-    value: sqlPass
+    value: sql_pass
   }
 }

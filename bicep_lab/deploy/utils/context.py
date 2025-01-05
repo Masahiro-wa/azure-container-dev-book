@@ -5,6 +5,12 @@ def normalize_env_name(env_name: str) -> str:
     # 小文字に変換し、アルファベットと数字のみを残す
     return re.sub(r'[^a-z0-9]', '', env_name.lower())
 
+def get_deployment_name(env_name: str, componet: str) -> str:
+    return f"{env_name}-{componet}-deployment"
+
+def get_main_rg_name(env_name: str) -> str:
+    return f"{env_name}-main-rg"
+
 def get_vnet_name(env_name: str) -> str:
     return f"{env_name}-vnet"
 
@@ -63,6 +69,15 @@ def get_sql_name_prefix(env_name: str) -> str:
 def get_unique_sql_server_name(env_name: str) -> str:
     suffix = __get_unique_suffix()
     return "%s-%s", (get_sql_name_prefix(env_name), suffix)
+
+def get_sql_secret_name(env_name: str) -> str:
+    return f"{env_name}-sql-pass"
+
+def get_vault_url(vault_name: str) -> str:
+    return f"https://{vault_name}.vault.azure.net/"
+
+def get_storage_account_url(account_name: str) -> str:
+    return f"https://{account_name}.blob.core.windows.net"
 
 def __get_unique_suffix() -> str:
     # UUIDを生成し、ハイフンを除去し、小文字に変換

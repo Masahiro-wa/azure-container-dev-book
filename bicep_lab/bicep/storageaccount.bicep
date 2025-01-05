@@ -1,11 +1,11 @@
-param storageAccountName string
+param storage_account_name string
 param location string = resourceGroup().location
 param sku string = 'Standard_LRS'
-param containerName string
+param dev_container_name string
 param vm_id_name string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-09-01' = {
-  name: storageAccountName
+  name: storage_account_name
   location: location
   sku: {
     name: sku
@@ -23,7 +23,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-09-01'
 
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
   parent: blobService
-  name: containerName
+  name: dev_container_name
   properties: {}
 }
 

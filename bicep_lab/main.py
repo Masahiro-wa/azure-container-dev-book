@@ -1,45 +1,14 @@
 import os
-import json
 import docopt
+import traceback
 import yaml
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from azure.identity import DefaultAzureCredential
-from deploy import deploy_bicep_template
-from deploy.utils.log import log
-from deploy import resource_group
+from deploy.resources import ResourceGroup, Subscription
+from deploy.utils import context, log
+import deploy.deployment_manager as deployment_manager
+from deploy.common import core_deploy_files, apps_deploy_files
 
+log.set_console_handler('INFO')
 root_path = os.path.dirname(os.path.dirname(__file__))
-bicep_template_path = os.path.join(root_path, 'bicep')
-credential = DefaultAzureCredential()
-
-core_deploy_files = {
-    'vnet': 'vnet.bicep',
-    'acr': 'acr.bicep',
-    'sa': 'storageaccount.bicep',
-    'keyvault': 'keyvault.bicep',
-    'role': 'id.bicep',
-    'dev_vm': 'dev_vm.bicep',
-}
-apps_deploy_files = {
-    'db': 'sqldb.bicep',
-    'app_container': 'appcontainer.bicep',
-    'front': 'frontend.bicep',
-    'back': 'backend.bicep',
-    'scheduler': 'scheduler.bicep'
-}
-
-core_parallel_groups = [
-    ['vnet', 'acr', 'sa', 'keyvault'],
-    ['role'],
-    ['dev_vm']
-]
-
-apps_parallel_groups = [
-    ['db', 'app_container'],
-    ['back', 'scheduler'],
-    ['front']
-]
-
 all_components_with_order = list(core_deploy_files.keys()) + list(apps_deploy_files.keys())
 
 def main():
@@ -56,6 +25,9 @@ def main():
     if sum(bool(option) for option in options) != 1:
         log.error("Exactly one of the options must be specified.")
         raise ValueError("Exactly one of the options must be specified.")
+    
+    if not __confirm_user_input(args, config):
+        return
 
     if args['--core-deploy'] or args['-cd'] or args['--apps-deploy'] or args['-ad']:
         deploy(args, config)
@@ -69,7 +41,8 @@ def main():
 
 def destroy(args, config):
     log.info("Destroying the resource group.")
-    resource_group.delete_resource_group(credential, config['subscription_id'], config['resource_group_name'])
+    rg = ResourceGroup(config['subscription_id'])
+    rg.delete_resource_group(context.get_main_rg_name(config['env_name']))
 
 def undeploy(args, config):
     ## TOBE: Implement undeploy function
@@ -79,33 +52,19 @@ def deploy(args, config):
     args = docopt.docopt(__read_usage())
     config = __read_config()
     components = []
-    if args['--core-deploy'] or args['-cd']:
-        components = __get_valid_components(args['--components'], core_deploy_files)
-    if args['--apps-deploy'] or args['-ad']:
-        components = __get_valid_components(args['--components'], apps_deploy_files)
-    
-    __validate_resource_group(components, config)
-    sorted_components = sorted(components, key=lambda x: all_components_with_order.index(x))
-    parallel_groups = core_parallel_groups + apps_parallel_groups
-
-    for group in parallel_groups:
-        common_components = list(set(group) & set(sorted_components))
-        if not common_components:
-            continue
-
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for component in common_components:
-                template_file = core_deploy_files.get(component) or apps_deploy_files.get(component)
-                template_path = os.path.join(bicep_template_path, template_file)
-                log.info(f"Deploying component: {component}")
-                futures.append(executor.submit(deploy_bicep_template, component, config, template_path))
-            
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    log.error(f"Error deploying component: {e}")
+    try:
+        if args['--core-deploy'] or args['-cd']:
+            components = __get_valid_components(args['--components'], core_deploy_files)
+        if args['--apps-deploy'] or args['-ad']:
+            components = __get_valid_components(args['--components'], apps_deploy_files)
+        
+        __validate_resource_group(components, config)
+        sorted_components = sorted(components, key=lambda x: all_components_with_order.index(x))
+        deployment_manager.run_deployment(config, sorted_components)
+    except Exception as e:
+        log.error(f"Error deploying the components: {e}")
+        log.error(traceback.format_exc())
+        raise e
 
 def __get_valid_components(raw_components_str, valid_components_dict):
     raw_components = raw_components_str.split(',')
@@ -130,17 +89,31 @@ def __read_config():
         return yaml.safe_load(config_file)
     
 def __validate_resource_group(components, config):
-    resource_group_name = config['resource_group_name']
-    subscription_id = config['subscription_id']
+    rg_name = config['resource_group_name']
     location = config['location']
+    resource_group = ResourceGroup(config['subscription_id'])
+
     if any([component in components for component in core_deploy_files.keys()]):
-        resource_group.create_resource_group(subscription_id, resource_group_name, location)
+        resource_group.create_resource_group(rg_name, location)
     else:
-        if not resource_group.check_resource_group_exists(credential, subscription_id, resource_group_name):
-            log.error(f"Before deploying the application components, the resource group {resource_group_name} must exist.")
-            raise ValueError(f"Before deploying the application components, the resource group {resource_group_name} must exist.")
+        if not resource_group.check_resource_group_exists(rg_name):
+            log.error(f"Before deploying the application components, the resource group {rg_name} must exist.")
+            raise ValueError(f"Before deploying the application components, the resource group {rg_name} must exist.")
         else:
-            log.info(f"validated resource group {resource_group_name} ok.")
+            log.info(f"validated resource group {rg_name} ok.")
+
+def __confirm_user_input(args:dict, config: dict):
+    subscription = Subscription(config['subscription_id'])
+    sub_info = subscription.get_subscription_info()
+    log.info(f"Subscription ID: {sub_info['id']}")
+    log.info(f"Subscription Name: {sub_info['display_name']}")
+    log.info(f"Tenant ID: {sub_info['tenant_id']}")
+    log.info(f"Componets: {args['--components']}")
+    confirm = input("Would you like to proceed with the deployment? (yes/y to confirm): ").strip().lower()
+    if confirm != 'yes' and confirm != 'y':
+        log.info("Deployment cancelled.")
+        return False
+    return True
 
 if __name__ == "__main__":
     main()

@@ -1,29 +1,51 @@
+import sys
 import logging
 
-class Logger:
-    def __init__(self, log_level=logging.DEBUG):
-        # ロガーを設定
-        self.logger = logging.getLogger('AppLogger')
-        self.logger.setLevel(log_level)
+__logger__ = logging.getLogger('logger')
+__logger__.propagate = False
+__logger__.setLevel(logging.INFO)
 
-        # フォーマットを設定
-        formatter = logging.Formatter('%(asctime)s  - %(levelname)s - %(message)s - [%(filename)s:%(lineno)d]')
+__console_handler__ = []
 
-        # コンソールハンドラを設定
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(log_level)
-        console_handler.setFormatter(formatter)
+__LOG_LEVEL__ = {
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL
+}
 
-        # ハンドラをロガーに追加
-        self.logger.addHandler(console_handler)
+def set_console_handler(level: str):
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(__get_log_level(level))
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)8s] %(message)s",
+                                           datefmt='%Y-%m-%d %H:%M:%S'))
+    try:
+        __logger__.addHandler(handler)
+        try:
+            if len(__console_handler__) ==1 :
+                __logger__.removeHandler(__console_handler__.pop())
+        except Exception as e:
+            __logger__.removeHandler(handler)
+    except Exception as e:
+        raise e
+    __console_handler__.append(handler)
 
-    def error(self, message):
-        self.logger.error(message)
+def debug(msg: str, *args, **kwargs):
+    __logger__.debug(msg, *args, **kwargs)
 
-    def info(self, message):
-        self.logger.info(message)
+def info(msg: str, *args, **kwargs):
+    __logger__.info(msg, *args, **kwargs)
 
-    def warning(self, message):
-        self.logger.warning(message)
+def warning(msg: str, *args, **kwargs):
+    __logger__.warning(msg, *args, **kwargs)
 
-log = Logger()
+def error(msg: str, *args, **kwargs):
+    __logger__.error(msg, *args, **kwargs)
+
+def critical(msg: str, *args, **kwargs):
+    __logger__.critical(msg, *args, **kwargs)
+
+def __get_log_level(level: str) -> int:
+    if level.lower() in __LOG_LEVEL__:
+        return __LOG_LEVEL__[level.lower()]
