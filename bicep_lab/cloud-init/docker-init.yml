@@ -33,9 +33,6 @@ runcmd:
 - systemctl enable docker
 - systemctl start docker
 
-# GitHubリポジトリのURL変数
-- REPO_URL="https://github.com/yourusername/yourrepository.git"
-
 # odaユーザーの作成とSSH鍵のコピー
 - adduser --disabled-password --gecos "" oda
 - usermod -aG sudo oda
@@ -47,7 +44,7 @@ runcmd:
 - chmod 600 /home/oda/.ssh/authorized_keys
 
 # GitHubリポジトリのクローン
-- REPO_URL="https://github.com/yourusername/yourrepository.git"
+- REPO_URL="https://github.com/Masahiro-wa/azure_container_Hands-on_with_Bicep.git"
 - su - oda -c "git clone $REPO_URL /home/oda/workspace"
 
 final_message: "The system is finally up, after $UPTIME seconds"
