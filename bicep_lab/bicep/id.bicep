@@ -1,4 +1,5 @@
-param location string = resourceGroup().location
+// param location string = resourceGroup().location
+param location string
 param vm_id_name string
 param schedule_id_name string
 param backend_id_name string

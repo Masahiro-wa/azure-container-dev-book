@@ -1,3 +1,5 @@
 Usage:
-  deploy -d | --deploy
-    [-c <components> | --components <components>]
+  main.py --core-deploy --components=<components>
+  main.py --apps-deploy --components=<components>
+  main.py --undeploy
+  main.py --destroy

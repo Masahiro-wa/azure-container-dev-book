@@ -1,6 +1,9 @@
-SubscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-EnvironmentName: 'bicep-lab'
-Location: 'japaneast'
+subscription_id: ''
+env_name: 'bicep-lab'
+location: 'japaneast'
+
+vnet_cidr: '10.0.0.0/16'
+dev_subnet_cidr: '10.0.24.0/24'
 
 UseSsh: 'True'
 AdminPassword: ''
@@ -8,5 +11,8 @@ AdminUsername: 'azureadmin'
 Admin_password: ''
 SecurityType: "Standard"
 OsDiskType: "Standard_LRS"
-VmSize: "Standard_D2s_v3"
+DevVmSize: "Standard_D2s_v3"
 UbuntuOsVersion: "Ubuntu-2204"
+
+DbName: 'backenddb'
+DbRootName: 'dbadmin'

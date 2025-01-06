@@ -1,8 +1,8 @@
 from azure.mgmt.keyvault import KeyVaultManagementClient
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.keyvault.secrets import SecretClient
-from base import Base
-from utils import context, log
+from .base import Base
+from deploy.utils import context, log
 import random, string
 
 class Keyvault(Base):

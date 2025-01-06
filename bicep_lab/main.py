@@ -8,17 +8,17 @@ import deploy.deployment_manager as deployment_manager
 from deploy.common import core_deploy_files, apps_deploy_files
 
 log.set_console_handler('INFO')
-root_path = os.path.dirname(os.path.dirname(__file__))
+root_path = os.path.dirname(__file__)
 all_components_with_order = list(core_deploy_files.keys()) + list(apps_deploy_files.keys())
 
 def main():
     args = docopt.docopt(__read_usage())
     config = __read_config()
+    config['RootPath'] = root_path
     # オプションのリストを作成
     options = [
-        args['--core-deploy'], args['-cd'],
-        args['--apps-deploy'], args['-ad'],
-        args['--undeploy'], args['--destroy']
+        args.get('--core-deploy', False), args.get('--apps-deploy', False),
+        args.get('--undeploy', False), args.get('--destroy', False)
     ]
 
     # オプションがただ一つだけ含まれていることを確認
@@ -29,11 +29,11 @@ def main():
     if not __confirm_user_input(args, config):
         return
 
-    if args['--core-deploy'] or args['-cd'] or args['--apps-deploy'] or args['-ad']:
+    if args.get('--core-deploy', False) or args.get('--apps-deploy', False):
         deploy(args, config)
-    elif args['--undeploy']:
+    elif args.get('--undeploy', False):
         undeploy(args, config)
-    elif args['--destroy']:
+    elif args.get('--destroy', False):
         destroy(args, config)
     else:
         log.error("Invalid option.")
@@ -49,13 +49,11 @@ def undeploy(args, config):
     pass
 
 def deploy(args, config):
-    args = docopt.docopt(__read_usage())
-    config = __read_config()
     components = []
     try:
-        if args['--core-deploy'] or args['-cd']:
+        if args.get('--core-deploy', False):
             components = __get_valid_components(args['--components'], core_deploy_files)
-        if args['--apps-deploy'] or args['-ad']:
+        if args.get('--apps-deploy', False):
             components = __get_valid_components(args['--components'], apps_deploy_files)
         
         __validate_resource_group(components, config)
@@ -81,15 +79,15 @@ def __get_valid_components(raw_components_str, valid_components_dict):
     return components
 
 def __read_usage():
-    with open(os.path.join(root_path, 'usage'), 'r') as usage_file:
+    with open(os.path.join(root_path, 'deploy', 'usage'), 'r') as usage_file:
         return usage_file.read().strip()
 
 def __read_config():
-    with open(os.path.join(root_path, 'config.yml'), 'r') as config_file:
+    with open(os.path.join(root_path, 'config', 'config.yml'), 'r') as config_file:
         return yaml.safe_load(config_file)
     
 def __validate_resource_group(components, config):
-    rg_name = config['resource_group_name']
+    rg_name = context.get_main_rg_name(config['env_name'])
     location = config['location']
     resource_group = ResourceGroup(config['subscription_id'])
 
@@ -106,7 +104,7 @@ def __confirm_user_input(args:dict, config: dict):
     subscription = Subscription(config['subscription_id'])
     sub_info = subscription.get_subscription_info()
     log.info(f"Subscription ID: {sub_info['id']}")
-    log.info(f"Subscription Name: {sub_info['display_name']}")
+    log.info(f"Subscription Name: {sub_info['name']}")
     log.info(f"Tenant ID: {sub_info['tenant_id']}")
     log.info(f"Componets: {args['--components']}")
     confirm = input("Would you like to proceed with the deployment? (yes/y to confirm): ").strip().lower()

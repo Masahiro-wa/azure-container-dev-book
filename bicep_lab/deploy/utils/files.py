@@ -1,5 +1,8 @@
 import os
-import log
+import time
+import json
+import tempfile
+from deploy.utils import log
 
 def get_file_names(dir_path: str) -> list:
     """
@@ -16,3 +19,11 @@ def get_file_names(dir_path: str) -> list:
     except Exception as e:
         log.error(f"An error occurred while listing files in {dir_path}: {e}")
         raise e
+
+# パラメータを一時ファイルに書き出す関数
+def write_params_to_tempfile(tmp_path: str, params_dict: dict) -> str:
+    temp_file = tempfile.NamedTemporaryFile(dir=tmp_path, delete=False, suffix=".json", mode="w")
+    json.dump(params_dict, temp_file, indent=2)  # JSON ファイルとして書き込み
+    temp_file.close()  # ファイルを閉じて保存
+    time.sleep(10)  # 3秒待つ
+    return temp_file.name  # ファイルパスを返す

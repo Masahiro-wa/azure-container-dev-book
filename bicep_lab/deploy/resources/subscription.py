@@ -1,6 +1,6 @@
 from azure.mgmt.subscription import SubscriptionClient
 from azure.core.exceptions import HttpResponseError
-from base import Base
+from .base import Base
 
 class Subscription(Base):
     def __init__(self, subscription_id):
@@ -16,7 +16,7 @@ class Subscription(Base):
             return {
                 'id': info.subscription_id,
                 'name': info.display_name,
-                'tenant_id': info.tenant_id,
+                'tenant_id': info.id,
                 'state': info.state,
                 'policies': info.subscription_policies
             }
