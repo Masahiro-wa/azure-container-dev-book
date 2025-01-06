@@ -43,32 +43,35 @@ def get_acr_name_prefix(env_name: str) -> str:
     return f"{normalized_env_name}acr"
 
 def get_unique_acr_name(env_name: str) -> str:
+    prefix = get_acr_name_prefix(env_name)
     suffix = __get_unique_suffix()
-    return "%s%s", (get_acr_name_prefix(env_name), suffix)
+    return f"{prefix}{suffix}"
 
 def get_keyvault_name_prefix(env_name: str) -> str:
-    normalize_env_name = normalize_env_name(env_name)
-    return f"{normalize_env_name}kvt"
+    normalized_env_name = normalize_env_name(env_name)
+    return f"{normalized_env_name}kvt"
 
 def get_unique_keyvault_name(env_name: str) -> str:
-    normalize_env_name = normalize_env_name(env_name)
+    prefix = get_keyvault_name_prefix(env_name)
     suffix = __get_unique_suffix()
-    return "%s%s", (get_keyvault_name_prefix(env_name), suffix)
+    return f"{prefix}{suffix}"
 
 def get_storage_account_name_prefix(env_name: str) -> str:
     normalized_env_name = normalize_env_name(env_name)
     return f"{normalized_env_name}stg"
 
 def get_unique_storage_account_name(env_name: str) -> str:
+    prefix = get_storage_account_name_prefix(env_name)
     suffix = __get_unique_suffix()
-    return "%sstg%s", (get_storage_account_name_prefix(env_name), suffix)
+    return f"{prefix}stg{suffix}"
 
 def get_sql_name_prefix(env_name: str) -> str:
     return f"{env_name}-sql"
 
 def get_unique_sql_server_name(env_name: str) -> str:
+    prefix = get_sql_name_prefix(env_name)
     suffix = __get_unique_suffix()
-    return "%s-%s", (get_sql_name_prefix(env_name), suffix)
+    return f"{prefix}-{suffix}"
 
 def get_sql_secret_name(env_name: str) -> str:
     return f"{env_name}-sql-pass"

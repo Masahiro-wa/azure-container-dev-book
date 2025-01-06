@@ -1,9 +1,11 @@
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
-from utils import context, log
-from base import Base
+from deploy.utils import context, log
+from .base import Base
 import json
+import os
+import subprocess
 
 class Bicep(Base):
     def __init__(self, subscription_id):
@@ -14,7 +16,7 @@ class Bicep(Base):
         self._resource_client = ResourceManagementClient(self.credential, self.subscription_id)
 
     def deploy(self, deploy_name: str, template_file_path: str, rg_name: str, 
-                              params: dict, mode: str = 'incremental') -> bool:
+                              params_file_path : str, mode: str = 'incremental') -> bool:
         """
         Function to deploy a Bicep template
 
@@ -22,33 +24,36 @@ class Bicep(Base):
             deploy_name (str): Name of the bicep deployment
             template_file_path (str): Path to the template file
             rg_name (str): Name of the resource group
-            params (dict): Parameter information
+            params_file_path  (str): Parameter information
             mode (str): Deployment mode (only 'incremental' or 'complete' can be specified)
 
         """
-        deploy_mode = DeploymentMode.INCREMENTAL
-        if mode == 'complete':
-            deploy_mode = DeploymentMode.COMPLETE
-        template = None
         try:
             with open(template_file_path, 'r') as f:
                 template = f.read()
         except FileNotFoundError as e:
             log.error(f"Template file not found: {e}")
             raise
-        deployment_properties = {
-            'mode': deploy_mode,
-            'template': json.loads(template),
-            'parameters': {k: {'value': v} for k, v in params.items()}
-        }
         try:
-            deployment_async_operation = self._resource_client.deployments.begin_create_or_update(
-                resource_group_name=rg_name,
-                deployment_name=deploy_name,
-                parameters=deployment_properties
-            )
-            deployment_async_operation.wait()
+            self.deploy_bicep_with_params(template_file_path, rg_name, params_file_path)
         except Exception as e:
-            log.error(f"Error during deployment: {e}")
+            log.error(f"Error during deployment: {deploy_name}")
+            log.error(e)
             raise e
         return True
+
+    @staticmethod
+    def deploy_bicep_with_params(template_file, resource_group, params_file_path):
+        try:
+            cmd = [
+                "az", "deployment", "group", "create",
+                "--resource-group", resource_group,
+                "--template-file", template_file,
+                "--parameters", params_file_path
+            ]
+            
+            # コマンド実行
+            subprocess.run(cmd, check=True)
+        finally:
+            # 一時ファイルを削除
+            os.remove(params_file_path)

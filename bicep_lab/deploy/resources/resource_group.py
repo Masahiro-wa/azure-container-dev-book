@@ -1,7 +1,7 @@
 from azure.mgmt.resource import ResourceManagementClient
 from azure.core.exceptions import ResourceNotFoundError, HttpResponseError
-from utils import log
-from base import Base
+from deploy.utils import log
+from .base import Base
 
 class ResourceGroup(Base):
     def __init__(self, subscription_id):

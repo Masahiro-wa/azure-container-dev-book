@@ -1,13 +1,14 @@
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils import log, context, files
-from resources import Bicep, Vnet, Acr, Keyvault, SqlDb, StorageAccount
-from common import core_deploy_files, apps_deploy_files, core_parallel_groups, apps_parallel_groups
+from deploy.utils import log, context, files
+from deploy.resources import Bicep, Vnet, Acr, Keyvault, SqlDb, StorageAccount
+from deploy.common import core_deploy_files, apps_deploy_files, core_parallel_groups, apps_parallel_groups
 
 def run_deployment(conf: dict, sorted_components: list):
     bicep_dir_path = os.path.join(conf['RootPath'], 'bicep')
+    tmp_dir_path = os.path.join(conf['RootPath'], 'tmp')
     parallel_groups = core_parallel_groups + apps_parallel_groups
-    bicep = Bicep(conf['SubscriptionId'])
+    bicep = Bicep(conf['subscription_id'])
 
     def deploy_component(component: str, template_path: str):
         """
@@ -20,8 +21,10 @@ def run_deployment(conf: dict, sorted_components: list):
         deploy_name = context.get_deployment_name(conf['env_name'], component)
         rg_name = context.get_main_rg_name(conf['env_name'])
         params = __prepare_params(component, rg_name, conf)
+        formatted_params = format_parameters_for_bicep(params)
+        params_file_path = files.write_params_to_tempfile(tmp_dir_path, formatted_params)
         if bicep.deploy(deploy_name=deploy_name, template_file_path=template_path,
-                     rg_name=rg_name, params=params):
+                     rg_name=rg_name, params_file_path =params_file_path ):
             log.info(f"Successfully deployed component: {component}")
 
     for group in parallel_groups:
@@ -42,44 +45,44 @@ def run_deployment(conf: dict, sorted_components: list):
                 try:
                     future.result()
                 except Exception as e:
-                    log.error(f"Error deploying component: {e}")
+                    log.error(f"Error deploying component: {component}")
+                    log.error(e)
 
-def __prepare_params(components: str, rg_name: str, conf: dict):
-    params = {}
-    for component in components:
-        if component == 'role':
-            return __prepare_role_params(conf, rg_name)
-        elif component == 'sa':
-            return __prepare_sa_params(conf)
-        elif component == 'vnet':
-            return __prepare_vnet_params(rg_name, conf)
-        elif component == 'acr':
-            return __prepare_acr_params(rg_name, conf) 
-        elif component == 'keyvault':
-            return __prepare_keyvault_params(rg_name, conf)
-        elif component == 'dev_vm':
-            return __prepare_dev_vmss_params(conf)
-        elif component == 'db':
-            return __prepare_sql_db_params(rg_name, conf)
-        else:
-            raise ValueError(f"Invalid component: {component}")
-    return params  
+def __prepare_params(component: str, rg_name: str, conf: dict):
+    if component == 'role':
+        return __prepare_role_params(conf)
+    elif component == 'sa':
+        return __prepare_sa_params(conf)
+    elif component == 'vnet':
+        return __prepare_vnet_params(rg_name, conf)
+    elif component == 'acr':
+        return __prepare_acr_params(rg_name, conf) 
+    elif component == 'keyvault':
+        return __prepare_keyvault_params(rg_name, conf)
+    elif component == 'dev_vm':
+        return __prepare_dev_vmss_params(conf)
+    elif component == 'db':
+        return __prepare_sql_db_params(rg_name, conf)
+    else:
+        raise ValueError(f"Invalid component: {component}") 
 
 def __prepare_role_params(conf: dict):
     env_name = conf['env_name']
     params = {}
+    params['location'] = conf['location']
     params['vm_id_name'] = context.get_vm_id_name(env_name)
     params['backend_id_name'] = context.get_backend_id_name(env_name)
     params['frontend_id_name'] = context.get_frontend_id_name(env_name)
-    params['scheduler_id_name'] = context.get_scheduler_id_name(env_name)
+    params['schedule_id_name'] = context.get_scheduler_id_name(env_name)
 
     return params
 
 def __prepare_sa_params(conf: dict):
     env_name = conf['env_name']
+    rg_name = context.get_main_rg_name(env_name)
     params = {}
     sa = StorageAccount(conf['subscription_id'])
-    sa_name = sa.find_storage_account_by_prefix(conf['resource_group_name'], env_name)
+    sa_name = sa.find_storage_account_by_prefix(rg_name, env_name)
     if sa_name:
         params['storage_account_name'] = sa_name
     else:
@@ -93,7 +96,7 @@ def __prepare_sa_params(conf: dict):
 def __prepare_vnet_params(rg_name: str, conf: dict):
     env_name = conf['env_name']
     vnet_cidr = conf['vnet_cidr']
-    dev_subnet_cidr = conf['subnet_cidr']
+    dev_subnet_cidr = conf['dev_subnet_cidr']
     vnet = Vnet(conf['subscription_id'])
     vnet_name = context.get_vnet_name(env_name)
     vnet_exists = vnet.get_vnet_by_name(rg_name, vnet_name)
@@ -157,10 +160,11 @@ def __prepare_dev_vmss_params(conf: dict):
 def __prepare_sql_db_params(rg_name: str, conf: dict):
     params = {}
     env_name = conf['env_name']
+    rg_name = context.get_main_rg_name(env_name)
     sql_db = SqlDb(conf['subscription_id'])
     keyvault = Keyvault(conf['subscription_id'])
 
-    sql_db_name  = sql_db.find_sql_db_by_prefix(conf['resource_group_name'], conf['env_name'])
+    sql_db_name  = sql_db.find_sql_db_by_prefix(rg_name, env_name)
     if sql_db_name:
         params['sql_db_name'] = sql_db_name
     else:
@@ -203,3 +207,9 @@ def __upload_vm_conf(conf: dict, params: dict):
     except Exception as e:
         log.error(f"An error occurred while uploading the VM configuration files: {e}")
         raise e
+
+def format_parameters_for_bicep(input_dict):
+    """
+    Azure Bicep CLI 用にパラメータを整形する関数
+    """
+    return {key: {"value": value} for key, value in input_dict.items()}

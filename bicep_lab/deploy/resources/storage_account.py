@@ -2,8 +2,8 @@ from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from azure.mgmt.storage import StorageManagementClient
 from azure.core.exceptions import HttpResponseError
 from azure.storage.blob import BlobServiceClient
-from base import Base
-from utils import context, log
+from .base import Base
+from deploy.utils import context, log
 import os
 
 class StorageAccount(Base):

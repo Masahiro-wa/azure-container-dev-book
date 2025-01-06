@@ -1,8 +1,8 @@
 from azure.mgmt.network import NetworkManagementClient
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.mgmt.network.models import VirtualNetwork
-from base import Base
-from utils import log
+from .base import Base
+from deploy.utils import log
 
 class Vnet(Base):
     def __init__(self, subscription_id):

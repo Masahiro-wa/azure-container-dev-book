@@ -1,0 +1,7 @@
+{
+  "location": "japaneast",
+  "vm_id_name": "mw-bicep-lab-vm-id",
+  "backend_id_name": "mw-bicep-lab-backend-id",
+  "frontend_id_name": "mw-bicep-lab-frontend-id",
+  "scheduler_id_name": "mw-bicep-lab-scheduler-id"
+}

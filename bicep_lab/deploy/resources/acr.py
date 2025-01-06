@@ -1,7 +1,7 @@
 from azure.mgmt.containerregistry import ContainerRegistryManagementClient
 from azure.core.exceptions import  HttpResponseError
-from base import Base
-from utils import context, log
+from .base import Base
+from deploy.utils import context, log
 
 class Acr(Base):
     def __init__(self, subscription_id):

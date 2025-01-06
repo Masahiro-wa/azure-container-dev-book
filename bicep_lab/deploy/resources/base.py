@@ -3,7 +3,7 @@ from azure.identity import DefaultAzureCredential
 class Base():
     def __init__(self, subscription_id):
         self._credential = DefaultAzureCredential()
-        self.subscription_id = subscription_id
+        self._subscription_id = subscription_id
 
     def _set_clients(self):
         '''OVERWRITE THIS METHOD IN CHILD CLASSES'''

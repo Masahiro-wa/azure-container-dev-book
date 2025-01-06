@@ -1,6 +1,6 @@
 from azure.mgmt.rdbms.mysql_flexibleservers import MySQLManagementClient
-from base import Base
-from utils import context, log
+from .base import Base
+from deploy.utils import context, log
 
 class SqlDb(Base):
     def __init__(self, subscription_id):
